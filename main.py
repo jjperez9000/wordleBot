@@ -7,7 +7,7 @@ import threading
 intents = discord.Intents().all()
 client = discord.Client(prefix='', intents=intents)
 
-with open('data/cfg.json', 'r') as f:
+with open('secrets/cfg.json', 'r') as f:
     data = json.load(f)
     currentGuild = data["guild"]
     responseChannel = data["channel"]
@@ -39,7 +39,7 @@ async def print_stats(message):
 
     channel = client.get_channel(responseChannel)
     user = str(client.get_guild(currentGuild).get_member(int(message.author.id)).display_name)
-    with open('scores.json', 'r') as f:
+    with open('secrets/scores.json', 'r') as f:
         data = json.load(f)
         score = data[str(message.author.id)]["score"]
         completions = data[str(message.author.id)]["completions"]
@@ -69,7 +69,7 @@ def sortFunction(e):
 
 
 async def print_leaderboard(message):
-    with open('scores.json', 'r') as f:
+    with open('secrets/scores.json', 'r') as f:
 
         data = json.load(f)
         channel = client.get_channel(responseChannel)
@@ -114,7 +114,7 @@ async def print_leaderboard(message):
 
 async def handle_submission(message):
     # open score file
-    with open('scores.json', 'r') as f:
+    with open('secrets/scores.json', 'r') as f:
 
         data = json.load(f)
         channel = client.get_channel(responseChannel)
@@ -145,7 +145,7 @@ async def handle_submission(message):
             await channel.send("Today's score received: " + str(7 - int(message.content[12])) + " points for " + str(message.content[12]) + guess +
                                ". " + str(client.get_guild(currentGuild).get_member(int(message.author.id)).display_name) + "'s total: " + str(data[str(message.author.id)]["score"]))
 
-    with open('scores.json', 'w') as f:
+    with open('secrets/scores.json', 'w') as f:
         f.write(json.dumps(data, indent=4))
 
 
@@ -156,18 +156,18 @@ def daily_reset():
     # print("Current Time =", current_time)
     # if current_time == '00:00:00':
     if current_time == '00:00:00':
-        with open('scores.json', 'r') as f:
+        with open('secrets/scores.json', 'r') as f:
             data = json.load(f)
             for player in data:
                 data[player]['playedToday'] = False
-        with open('scores.json', 'w') as f:
+        with open('secrets/scores.json', 'w') as f:
             f.write(json.dumps(data, indent=4))
 
 
 daily_reset()
 
 # wordlebot toeken
-with open('data/token.json', 'r') as f:
+with open('secrets/token.json', 'r') as f:
     token = str(json.load(f)['token'])
     client.run(token)
 
