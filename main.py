@@ -167,8 +167,7 @@ def daily_reset():
 daily_reset()
 
 # wordlebot toeken
-client.run('OTM1NTQ3NzEwMjQ3OTI3ODU5.YfAOsw.lbNzjzb_Gczps13sq8SFAQ907zY')
+
 # ttetsBot toeken
-# client.run('OTM1OTk2NTc1MDMxODk0MDQ2.YfGwvQ.bhSupVFpSe_kFKRDFI83bE_H_Zg')
 
 
