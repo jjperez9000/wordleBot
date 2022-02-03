@@ -7,7 +7,7 @@ import threading
 intents = discord.Intents().all()
 client = discord.Client(prefix='', intents=intents)
 
-with open('cfg.json', 'r') as f:
+with open('data/cfg.json', 'r') as f:
     data = json.load(f)
     currentGuild = data["guild"]
     responseChannel = data["channel"]
@@ -167,7 +167,8 @@ def daily_reset():
 daily_reset()
 
 # wordlebot toeken
-
-# ttetsBot toeken
+with open('data/token.json', 'r') as f:
+    token = str(json.load(f)['token'])
+    client.run(token)
 
 
