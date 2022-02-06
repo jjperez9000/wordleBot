@@ -1,6 +1,7 @@
 # bot.py
 import json
 import discord
+from discord.utils import get
 from datetime import datetime
 import threading
 
@@ -22,8 +23,12 @@ async def on_message(message):
     # handle wordle submissions
     if message.content[:7] == '!Wordle':
         await handle_submission(message)
-    elif message.content == '!leaderboard':
-        await print_leaderboard(message)
+    elif message.content[:12] == '!leaderboard':
+        # print(message.content[13:])
+        if message.content[13:] == 'weekly':
+            await print_leaderboard(message, "weekly_score")
+        else:
+            await print_leaderboard(message, "total_score")
     elif message.content == '!help':
         await print_help(message)
     elif message.content[:6] == '!stats':
@@ -36,12 +41,11 @@ async def on_message(message):
 
 
 async def print_stats(message):
-
     channel = client.get_channel(responseChannel)
     user = str(client.get_guild(currentGuild).get_member(int(message.author.id)).display_name)
     with open('secrets/scores.json', 'r') as f:
         data = json.load(f)
-        score = data[str(message.author.id)]["score"]
+        score = data[str(message.author.id)]["total_score"]
         completions = data[str(message.author.id)]["completions"]
 
     await channel.send("Stats for **" + str(user) + "**. Completed " + str(completions) + ". Total Score: " + str(score))
@@ -64,11 +68,16 @@ async def print_help(message):
                        "!leaderboard -> shows the current standings\n"
                        "!stats -> shows your current stats")
 
-def sortFunction(e):
-    return e['score']
+
+def sortTotal(data):
+    return data["total_score"]
 
 
-async def print_leaderboard(message):
+def sortWeekly(data):
+    return data["weekly_score"]
+
+
+async def print_leaderboard(message, key):
     with open('secrets/scores.json', 'r') as f:
 
         data = json.load(f)
@@ -76,8 +85,12 @@ async def print_leaderboard(message):
 
         players = []
         for player in data:
-            players.append({'id':player, 'score':data[player]['score']})
-        players.sort(key=sortFunction, reverse=True)
+            players.append({'id':player, key:data[player][key]})
+
+        if key == "weekly_score":
+            players.sort(key=sortWeekly, reverse=True)
+        else:
+            players.sort(key=sortTotal, reverse=True)
 
         i = 1
         leaderboard = "```"
@@ -101,7 +114,7 @@ async def print_leaderboard(message):
                width=12,
             )
             score_formatter = '{message:{fill}{align}{width}}'.format(
-                message=str(player['score']),
+                message=str(player[key]),
                 fill=' ',
                 align='<',
                 width=5,
@@ -110,6 +123,47 @@ async def print_leaderboard(message):
             i += 1
         leaderboard += "```"
         await channel.send(leaderboard)
+
+
+def create_user(id):
+    new_user = {str(id):
+                    {
+                        "total_score": 0,
+                        "playedToday": False,
+                        "completions": 0,
+                        "weekly_score": 0,
+                        "recent_scores": [0, 0, 0, 0, 0, 0, 0]
+                    }
+                }
+    return new_user
+
+
+async def inject_score(user_list, user, score):
+    score = 7 - score
+    user_list[user]["total_score"] += score
+    user_list[user]["weekly_score"] = user_list[user]["weekly_score"] + score - user_list[user]["recent_scores"][6]
+
+    for i in range(6, 0, -1):
+        user_list[user]["recent_scores"][i] = user_list[user]["recent_scores"][i - 1]
+    user_list[user]["recent_scores"][0] = score
+
+    top_score = 0
+    top_wordler = ""
+
+    for player in user_list:
+        if user_list[player]["weekly_score"] > top_score:
+            top_score = user_list[player]["weekly_score"]
+            top_wordler = player
+
+    guild = client.get_guild(currentGuild)
+    role = get(guild.roles, name='Top Wordler')
+    winner = guild.get_member(int(top_wordler))
+    if winner != role.members[0]:
+        await role.members[0].remove_roles(role)
+    await winner.add_roles(role)
+
+
+    return user_list
 
 
 async def handle_submission(message):
@@ -122,7 +176,7 @@ async def handle_submission(message):
         # check if user is new or not
         if str(message.author.id) not in data:
             print("added new user")
-            new_user = {str(message.author.id): {"score": 0, "playedToday": False, "completions": 0}}
+            new_user = create_user(message.author.id)
             data.update(new_user)
 
         # make sure user hasn't submitted already if they exist
@@ -130,20 +184,22 @@ async def handle_submission(message):
             await channel.send("Only one score submission allowed per day.")
         # check if user failed
         elif message.content[12] == 'X':
-            data[str(message.author.id)]["playedToday"] = True
             await channel.send("lol dumbass")
-        # if no fail then update score
+            data = await inject_score(data, str(message.author.id), 7)
         else:
-            print("user already in")
-            data[str(message.author.id)]["score"] += 7 - int(message.content[12])
-            data[str(message.author.id)]["playedToday"] = True
-            data[str(message.author.id)]["completions"] += 1
+            # data[str(message.author.id)]["total_score"] += 7 - int(message.content[12])
+            # data[str(message.author.id)]["completions"] += 1
+            data = await inject_score(data, str(message.author.id), int(message.content[12]))
             if int(message.content[12]) == 1:
                 guess = " guess"
             else:
                 guess = " guesses"
-            await channel.send("Today's score received: " + str(7 - int(message.content[12])) + " points for " + str(message.content[12]) + guess +
-                               ". " + str(client.get_guild(currentGuild).get_member(int(message.author.id)).display_name) + "'s total: " + str(data[str(message.author.id)]["score"]))
+            await channel.send("Today's score received: " + str(7 - int(message.content[12])) + " points for " +
+                               str(message.content[12]) + guess + ". " +
+                               str(client.get_guild(currentGuild).get_member(int(message.author.id)).display_name) +
+                               "'s total: " + str(data[str(message.author.id)]["total_score"]))
+
+        # data[str(message.author.id)]["playedToday"] = True
 
     with open('secrets/scores.json', 'w') as f:
         f.write(json.dumps(data, indent=4))
