@@ -4,6 +4,7 @@ import discord
 from discord.utils import get
 from datetime import datetime
 import threading
+import pytz
 
 intents = discord.Intents().all()
 client = discord.Client(prefix='', intents=intents)
@@ -21,10 +22,10 @@ async def on_message(message):
 
     # this will break after day 999
     # handle wordle submissions
+    channel = client.get_channel(responseChannel)
     if message.content[:7] == '!Wordle':
         await handle_submission(message)
     elif message.content[:12] == '!leaderboard':
-        # print(message.content[13:])
         if message.content[13:] == 'weekly':
             await print_leaderboard(message, "weekly_score")
         else:
@@ -35,9 +36,23 @@ async def on_message(message):
         await print_stats(message)
     elif message.content == '!test':
         print("working")
-
-        channel = client.get_channel(responseChannel)
         await channel.send("test!")
+    elif message.content == '!reset' and message.author.id == 261236642680012802:
+        await channel.send("resetting the day, captain")
+        await force_reset()
+    elif message.content == '!reset':
+        await channel.send("fuck off")
+    elif message.content == 'o7':
+        await channel.send('o7')
+
+
+async def force_reset():
+    with open('secrets/scores.json', 'r') as f:
+        data = json.load(f)
+        for player in data:
+            data[player]['playedToday'] = False
+    with open('secrets/scores.json', 'w') as f:
+        f.write(json.dumps(data, indent=4))
 
 
 async def print_stats(message):
@@ -162,7 +177,6 @@ async def inject_score(user_list, user, score):
         await role.members[0].remove_roles(role)
     await winner.add_roles(role)
 
-
     return user_list
 
 
@@ -199,7 +213,7 @@ async def handle_submission(message):
                                str(client.get_guild(currentGuild).get_member(int(message.author.id)).display_name) +
                                "'s total: " + str(data[str(message.author.id)]["total_score"]))
 
-        # data[str(message.author.id)]["playedToday"] = True
+        data[str(message.author.id)]["playedToday"] = True
 
     with open('secrets/scores.json', 'w') as f:
         f.write(json.dumps(data, indent=4))
@@ -207,11 +221,13 @@ async def handle_submission(message):
 
 def daily_reset():
     threading.Timer(1, daily_reset).start()
-    now = datetime.now()
+    tz = pytz.timezone('US/Eastern')
+    now = datetime.now(tz)
     current_time = now.strftime("%H:%M:%S")
     # print("Current Time =", current_time)
-    # if current_time == '00:00:00':
     if current_time == '00:00:00':
+        # print("test")
+        print("working")
         with open('secrets/scores.json', 'r') as f:
             data = json.load(f)
             for player in data:
@@ -226,5 +242,4 @@ daily_reset()
 with open('secrets/token.json', 'r') as f:
     token = str(json.load(f)['token'])
     client.run(token)
-
 
