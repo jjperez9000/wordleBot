@@ -120,6 +120,8 @@ async def print_leaderboard(message, key):
         for player in players:
             player_id = player['id']
             name = guild.get_member(int(player_id))
+            if name is None:
+                continue
             # name = await client.fetch_user(int(player_id))
             name_formatter = '{message:{fill}{align}{width}}'.format(
                # message=name.nick,
@@ -154,10 +156,12 @@ def create_user(id):
 
 
 async def inject_score(user_list, user, score):
+    # increment user score
     score = 7 - score
     user_list[user]["total_score"] += score
     user_list[user]["weekly_score"] = user_list[user]["weekly_score"] + score - user_list[user]["recent_scores"][6]
 
+    # move other scores back
     for i in range(6, 0, -1):
         user_list[user]["recent_scores"][i] = user_list[user]["recent_scores"][i - 1]
     user_list[user]["recent_scores"][0] = score
@@ -173,9 +177,34 @@ async def inject_score(user_list, user, score):
     guild = client.get_guild(currentGuild)
     role = get(guild.roles, name='Top Wordler')
     winner = guild.get_member(int(top_wordler))
-    if winner != role.members[0]:
+    if len(role.members) > 0:
         await role.members[0].remove_roles(role)
     await winner.add_roles(role)
+
+    # update top wordler
+    # key = "weekly_score"
+    # players = []
+    # top_score = 0
+    # top_player = None
+    # for player in user_list:
+    #     players.append({'id': player, key: user_list[player][key]})
+    #
+    # for player in players:
+    #     score = player[key]
+    #     if score > top_score:
+    #         top_score = score
+    #         top_player = player['id']
+    #
+    # guild = client.get_guild(currentGuild)
+    # role = get(guild.roles, name='Top Wordler')
+    # winner = guild.get_member(int(top_player))
+    # print(winner)
+    # print(top_player)
+    #
+    # if len(role.members) > 0:
+    #     await role.members[0].remove_roles(role)
+    # if winner != None:
+    #     await winner.add_roles(role)
 
     return user_list
 
@@ -201,8 +230,7 @@ async def handle_submission(message):
             await channel.send("lol dumbass")
             data = await inject_score(data, str(message.author.id), 7)
         else:
-            # data[str(message.author.id)]["total_score"] += 7 - int(message.content[12])
-            # data[str(message.author.id)]["completions"] += 1
+            data[str(message.author.id)]["completions"] += 1
             data = await inject_score(data, str(message.author.id), int(message.content[12]))
             if int(message.content[12]) == 1:
                 guess = " guess"
