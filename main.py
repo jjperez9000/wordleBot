@@ -48,6 +48,12 @@ async def on_message(message):
         else:
             await destinationChannel.send(message.content)
 
+    # check if not echo
+    if message.content[:5] == '$stfu':
+        with open('stfu.png', 'rb') as img:
+            picture = discord.File(img)
+            await message.channel.send(file=picture)
+
     # make sure message is valid
     if message.author == client.user or message.channel.id != responseChannel:
         return
@@ -259,21 +265,6 @@ async def handle_submission(message):
 
 
 async def send_snark(guesses, channel):
-    # messages = [
-    #     ["fuck you"],
-    #     ["kinda sus"],
-    #     ["thank you Sydney, very cool", "impressive!", "you must feel pretty good right about now",
-    #      "stop you're making everyone jealous", "poggers",
-    #      "this has been the highlight of my day. I have a boring life"],
-    #     ["birdie", "wow you did slightly better than average", "nice job", "three is like one less than four, crazy"],
-    #     ["Wow that's so average", "holy shit you did fine", "kinda expected, coming from you", "meh.",
-    #      "my job is so dull sometimes"],
-    #     ["rough day", "oooh that's tough", "at least it's not 6 :)", "wooooooooah, you suck", "you can do better",
-    #                                                                     "I guess somebody had to suck today"],
-    #     ["by the skin of your teeth!", "at least you didn't lose :)", "le mao",
-    #      "wow that's the worst I've seen all day",
-    #      "you must be joking", "L + ratio", ":copium::copium::copium:"]
-    # ]
     with open('secrets/quips.json', 'r') as f:
         data = json.load(f)
         messages = data
